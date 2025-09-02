@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cafeteria</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="menu">
+        <h1>Cafés</h1>
+
+        <div class="item">
+            <img src="img/super_coffee.png" alt="Super Coffee">
+            <div class="item-info">
+                <h3>Super Coffee</h3>
+                <span class="price" data-price="4.50">R$ 4.50</span>
+            </div>
+            <input type="number" min="0" value="0" class="qty">
+        </div>
+
+        <div class="item">
+            <img src="img/mocha_delicious.png" alt="Mocha Delicious">
+            <div class="item-info">
+                <h3>Mocha Delicious</h3>
+                <span class="price" data-price="4.80">R$ 4.80</span>
+            </div>
+            <input type="number" min="0" value="0" class="qty">
+        </div>
+
+        <div class="item">
+            <img src="img/latte_love.png" alt="Latte Love">
+            <div class="item-info">
+                <h3>Latte Love</h3>
+                <span class="price" data-price="4.20">R$ 4.20</span>
+            </div>
+            <input type="number" min="0" value="0" class="qty">
+        </div>
+
+        <button id="confirmar">Adicionar ao Carrinho   <img class="vetor" src="img/add_cart.svg" alt=""></button>
+    </div>
+
+    <img id="cart-icon" src="img/shop_cart.png" alt="Carrinho" style="width:40px;cursor:pointer;background-color: #4caf50;height: fit-content;">
+    <div class="carrinho" id="carrinho">
+        <h2>Carrinho</h2>
+        <div id="carrinho-items"></div>
+        <button id="finalizar">Finalizar Compra</button>
+    </div>
+
+    <script>
+
+        const carrinhoBox = document.getElementById("carrinho");
+        const cartIcon = document.getElementById("cart-icon");
+
+        cartIcon.addEventListener("click", () => {
+            carrinhoBox.classList.toggle("expandido");
+            carregarCarrinho();
+        });
+        
+        document.getElementById("confirmar").addEventListener("click", () => {
+            const items = [];
+            document.querySelectorAll(".item").forEach((el, idx) => {
+            const nome = el.querySelector("h3").innerText;
+            const preco = parseFloat(el.querySelector(".price").dataset.price);
+            const qtd = parseInt(el.querySelector(".qty").value);
+            if (qtd > 0) {
+                items.push({ nome, quantidade: qtd, preco });
+                el.querySelector(".qty").value = 0;
+            }
+            });
+
+            if (items.length === 0) {
+            alert("Selecione pelo menos um item para adicionar ao carrinho.");
+            return;
+            }
+
+            fetch("/pedido", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ itens: items })
+            })
+            .then(r => {
+                alert("Item(s) adicionado(s) ao carrinho!");
+                carrinhoBox.classList.toggle("expandido");
+                carregarCarrinho();
+            }).catch(e => alert("Erro ao adicionar ao carrinho"));
+        });
+
+        async function carregarCarrinho() {
+            const res = await fetch("/carrinho");
+            const itens = await res.json();
+
+            const carrinhoDiv = document.getElementById("carrinho-items");
+            carrinhoDiv.innerHTML = "";
+
+            if (itens.length === 0) {
+                carrinhoDiv.innerHTML = "<p>Carrinho vazio</p>";
+                return;
+            }
+
+            itens.forEach(item => {
+                const div = document.createElement("div");
+                div.classList.add("carrinho-item", "divcarrinho");
+                
+                div.innerHTML = `
+                <span>${item.nome} - R$ ${item.preco.toFixed(2)}</span>
+                <input type="number" id="qtd-${item.nome}" value="${item.quantidade}" min="0" style="width: 30px; margin: 0 5px;">
+                <button onclick="confirmarQtd('${item.nome}')">Confirmar</button>
+                `;
+                carrinhoDiv.appendChild(div);
+            });
+        }
+
+        async function confirmarQtd(nome) {
+            const input = document.getElementById(`qtd-${nome}`);
+            const quantidade = parseInt(input.value);
+            await fetch("/carrinho/atualizar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome, quantidade })
+            });
+            carregarCarrinho();
+            }
+    </script>
+</body>
+
+</html>
